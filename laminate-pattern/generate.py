@@ -20,26 +20,35 @@ thin = [
  (725,1025,180,120),
 ]
 
+OFFS = [(dx*W, dy*H) for dx in (-1,0,1) for dy in (-1,0,1)]   # wrap copies => seamless repeat
+
+def visible(x,y,w,h,dx,dy):   # skip copies that fall fully outside the tile
+    return x+dx < W+THICK and x+w+dx > -THICK and y+dy < H+THICK and y+h+dy > -THICK
+
 o = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">',
-     '<title>Retro rounded-rectangle laminate pattern</title>',
+     '<title>Retro rounded-rectangle laminate pattern - seamless tile, black on frosted</title>',
      f'<defs><clipPath id="art"><rect width="{W}" height="{H}"/></clipPath></defs>',
-     f'<rect id="bg" width="{W}" height="{H}" fill="none"/>',
      '<g clip-path="url(#art)" fill="none" stroke-linejoin="round">',
      f'<g id="thin-lines" stroke="{INK}" stroke-width="{THIN}">']
-for x,y,w,h in thin:
-    o.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{R}"/>')
+for dx,dy in OFFS:
+    for x,y,w,h in thin:
+        if visible(x,y,w,h,dx,dy):
+            o.append(f'<rect x="{x+dx}" y="{y+dy}" width="{w}" height="{h}" rx="{R}"/>')
 o.append('</g>')
 o.append(f'<g id="thick-frames" stroke="{INK}" stroke-width="{THICK}">')
-for x,y,w,h,d in thick:
-    o.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{R}"/>')
+for dx,dy in OFFS:
+    for x,y,w,h,d in thick:
+        if visible(x,y,w,h,dx,dy):
+            o.append(f'<rect x="{x+dx}" y="{y+dy}" width="{w}" height="{h}" rx="{R}"/>')
 o.append('</g><g id="dotted-bands">')
-for x,y,w,h,d in thick:
-    if not d: continue
-    bx = x+w-13 if d=='r' else x-13          # band centred on the edge
-    o.append(f'<rect x="{bx}" y="{y+R-8}" width="26" height="{h-2*R+16}" fill="{INK}" stroke="none" rx="10"/>')
-    cx = bx+13; n = int((h-2*R)//17)
-    y0 = y+h/2-(n-1)*17/2
-    o.append('<g fill="#ffffff" stroke="none">' +
-             ''.join(f'<circle cx="{cx:.1f}" cy="{y0+i*17:.1f}" r="4.6"/>' for i in range(n)) + '</g>')
+for dx,dy in OFFS:
+    for x,y,w,h,d in thick:
+        if not d or not visible(x,y,w,h,dx,dy): continue
+        x+=dx; y+=dy
+        bx = x+w-13 if d=='r' else x-13
+        o.append(f'<rect x="{bx}" y="{y+R-8}" width="26" height="{h-2*R+16}" fill="{INK}" stroke="none" rx="10"/>')
+        cx = bx+13; n = int((h-2*R)//17); y0 = y+h/2-(n-1)*17/2
+        o.append('<g fill="#ffffff" stroke="none">' +
+                 ''.join(f'<circle cx="{cx:.1f}" cy="{y0+i*17:.1f}" r="4.6"/>' for i in range(n)) + '</g>')
 o.append('</g></g></svg>')
 open('laminate_pattern.svg','w').write('\n'.join(o))
